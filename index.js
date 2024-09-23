@@ -1,27 +1,29 @@
+require('dotenv').config(); // Charger les variables d'environnement
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const handleMessage = require('./handles/handleMessage');
-const handlePostback = require('./handles/handlePostback');
-const sendMessage = require('./handles/sendMessage');
+const { handleMessage } = require('./handles/handleMessage');
+const { handlePostback } = require('./handles/handlePostback');
 
 const app = express();
 app.use(bodyParser.json());
 
+app.get('/webhook', (req, res) => {
+    const token = req.query['hub.verify_token'];
+    if (token === process.env.VERIFY_TOKEN) {
+        return res.status(200).send(req.query['hub.challenge']);
+    }
+    res.sendStatus(403);
+});
+
 app.post('/webhook', (req, res) => {
     const body = req.body;
 
+    // Vérifier le type d'événement
     if (body.object === 'page') {
         body.entry.forEach(entry => {
-            const webhook_event = entry.messaging[0];
-
-            const senderId = webhook_event.sender.id;
-            if (webhook_event.message) {
-                const message = webhook_event.message.text || `image:${webhook_event.message.attachments[0].payload.url}`;
-                handleMessage(senderId, message, (response) => sendMessage(senderId, response));
-            } else if (webhook_event.postback) {
-                const payload = webhook_event.postback.payload;
-                handlePostback(senderId, payload, (response) => sendMessage(senderId, response));
-            }
+            const webhookEvent = entry.messaging[0];
+            handleMessage(webhookEvent);
         });
         res.status(200).send('EVENT_RECEIVED');
     } else {
@@ -29,23 +31,7 @@ app.post('/webhook', (req, res) => {
     }
 });
 
-// Endpoint pour la validation du webhook
-app.get('/webhook', (req, res) => {
-    const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-    const mode = req.query['hub.mode'];
-    const token = req.query['hub.verify_token'];
-    const challenge = req.query['hub.challenge'];
-
-    if (mode && token) {
-        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
-            res.status(200).send(challenge);
-        } else {
-            res.sendStatus(403);
-        }
-    }
+app.listen(process.env.PORT || 3000, () => {
+    console.log('Server is running');
 });
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Serveur en cours d'exécution sur le port ${PORT}`);
-});
+            
