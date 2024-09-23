@@ -1,22 +1,23 @@
-const axios = require('axios');
+const request = require('request');
 
-module.exports = async function sendMessage(userId, message) {
-    const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
+function sendMessage(senderId, message) {
+    const body = {
+        recipient: { id: senderId },
+        message: { text: message }
+    };
 
-    try {
-        const response = await axios.post(`https://graph.facebook.com/v12.0/me/messages`, {
-            recipient: { id: userId },
-            message: { text: message }
-        }, {
-            params: { access_token: PAGE_ACCESS_TOKEN }
-        });
-
-        if (response.status === 200) {
-            console.log('Message envoyé avec succès!');
+    request({
+        uri: 'https://graph.facebook.com/v12.0/me/messages',
+        qs: { access_token: process.env.PAGE_ACCESS_TOKEN },
+        method: 'POST',
+        json: body
+    }, (error, response, body) => {
+        if (!error && response.statusCode === 200) {
+            console.log('Message envoyé avec succès !');
         } else {
-            console.error('Erreur lors de l\'envoi du message:', response.data);
+            console.error('Erreur lors de l\'envoi du message:', error || body.error);
         }
-    } catch (error) {
-        console.error('Erreur lors de la requête vers l\'API Messenger:', error.message);
-    }
-};
+    });
+}
+
+module.exports = sendMessage;
