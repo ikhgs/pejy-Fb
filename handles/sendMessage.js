@@ -1,23 +1,23 @@
 const request = require('request');
 
-function sendMessage(senderId, message) {
-    const body = {
-        recipient: { id: senderId },
-        message: { text: message }
+function sendMessage(recipientId, messageText) {
+    const messageData = {
+        recipient: { id: recipientId },
+        message: { text: messageText }
     };
 
     request({
         uri: 'https://graph.facebook.com/v12.0/me/messages',
-        qs: { access_token: process.env.PAGE_ACCESS_TOKEN },
+        qs: { access_token: process.env.FB_PAGE_ACCESS_TOKEN },
         method: 'POST',
-        json: body
+        json: messageData
     }, (error, response, body) => {
         if (!error && response.statusCode === 200) {
-            console.log('Message envoyé avec succès !');
+            console.log('Message sent successfully:', body);
         } else {
-            console.error('Erreur lors de l\'envoi du message:', error || body.error);
+            console.error('Error sending message:', error || body);
         }
     });
 }
 
-module.exports = sendMessage;
+module.exports = { sendMessage };
