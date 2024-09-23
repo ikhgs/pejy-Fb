@@ -1,34 +1,35 @@
-const fs = require('fs');
-const path = require('path');
+module.exports = async function handleMessage(event) {
+    const senderId = event.sender.id;
+    const message = event.message;
 
-// Object pour stocker les commandes
-let commands = {};
+    if (message.attachments) {
+        // Si le message contient une pièce jointe (par exemple, une image)
+        const imageUrl = message.attachments[0].payload.url;
 
-// Lire et charger tous les fichiers du répertoire "commands"
-const commandsDir = path.join(__dirname, '../commands');
-fs.readdirSync(commandsDir).forEach(file => {
-    if (file.endsWith('.js')) {
-        const command = require(path.join(commandsDir, file));
-        // Utiliser le nom de la commande comme clé
-        commands[command.config.name] = command;
+        console.log(`Image reçue de l'utilisateur ${senderId}: ${imageUrl}`);
+
+        // Appel à la commande `principe` pour traiter l'image
+        const principe = require('../commands/principe');
+        await principe.onStart(senderId, `image:${imageUrl}`, (response) => {
+            sendMessage(senderId, response);
+        });
+
+        return;
     }
-});
 
-module.exports = async function handleMessage(userId, message, sendResponse) {
-    // Vérifier si le message contient un nom de commande
-    const commandName = message.split(' ')[0].toLowerCase(); // Extraction du premier mot du message comme commande
-    const args = message.split(' ').slice(1).join(' '); // Extraction du reste comme arguments
+    // Si le message est du texte
+    if (message.text) {
+        const text = message.text.trim().toLowerCase();
 
-    if (commands[commandName]) {
-        // Si la commande existe, l'exécuter
-        try {
-            await commands[commandName].onStart(userId, args, sendResponse);
-        } catch (error) {
-            console.error(`Erreur lors de l'exécution de la commande ${commandName}:`, error.message);
-            sendResponse("Une erreur est survenue lors de l'exécution de la commande.");
-        }
-    } else {
-        // Si la commande n'existe pas, renvoyer un message d'erreur ou une réponse par défaut
-        sendResponse("Commande non reconnue. Essayez 'help' pour voir la liste des commandes disponibles.");
+        // Appel à la commande `principe` pour gérer un texte
+        const principe = require('../commands/principe');
+        await principe.onStart(senderId, text, (response) => {
+            sendMessage(senderId, response);
+        });
+
+        return;
     }
+
+    // Si aucun message valide n'est reçu
+    sendMessage(senderId, "Commande non reconnue. Essayez 'help' pour voir la liste des commandes disponibles.");
 };
